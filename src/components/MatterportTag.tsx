@@ -20,9 +20,9 @@ export const MatterportTag = ({ showcaseWindow }: MatterportTagProps) => {
           label: 'Office',
           description: 'This tag was added through the Matterport SDK',
           anchorPosition: {
-            x: 30,
+            x: -5.630548477172852,
             y: 0,
-            z: -2,
+            z: -2.9571774005889893,
           },
           stemVector: {
             x: 0,
