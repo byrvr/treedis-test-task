@@ -3,6 +3,7 @@ import styles from "../styles/Home.module.css";
 import { useEffect, useState } from "react";
 import { MatterportTag } from "../components/MatterportTag";
 import { MatterportModel } from "../components/MatterportModel";
+import Menu from '../components/Menu';
 
 export default function Home() {
   const sdkKey = process.env.MATTERPORT_SDK_KEY;
@@ -23,6 +24,7 @@ export default function Home() {
   return (
     <div className={styles.page}>
       <main className={styles.main}>
+        <Menu />
         <iframe 
           id="showcase" 
           width="1110" 
