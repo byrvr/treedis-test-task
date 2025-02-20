@@ -31,6 +31,15 @@ interface MatterportSDK {
       transition: string;
       transitionTime: number;
     }) => Promise<void>;
+    createGraph: () => Promise<any>;
+  };
+  Graph: {
+    createAStarRunner: (graph: any, start: any, end: any) => { exec: () => any[] };
+  };
+  Camera: {
+    pose: {
+      subscribe: (callback: (pose: { rotation: { x: number; y: number } }) => void) => void;
+    };
   };
 }
 
@@ -40,6 +49,7 @@ const Menu = ({ showcaseWindow }: MenuProps) => {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [mpSdk, setMpSdk] = useState<MatterportSDK | null>(null);
+  const [currentPose, setCurrentPose] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Initialize Matterport SDK
   useEffect(() => {
@@ -97,6 +107,15 @@ const Menu = ({ showcaseWindow }: MenuProps) => {
     fetchMenuItems();
   }, [searchQuery]);
 
+  // Add Camera pose subscription
+  useEffect(() => {
+    if (!mpSdk) return;
+
+    mpSdk.Camera.pose.subscribe((pose) => {
+      setCurrentPose(pose.rotation);
+    });
+  }, [mpSdk]);
+
   const handleTeleport = async () => {
     const sweepId = '88f2h8zsa0e28txst3ahsyp3d';
     
@@ -122,8 +141,49 @@ const Menu = ({ showcaseWindow }: MenuProps) => {
     }
   };
 
-  const handleNavigate = () => {
-    alert('Navigate in progress');
+  const handleNavigate = async () => {
+    if (!mpSdk) {
+      alert('Matterport SDK not ready');
+      return;
+    }
+
+    try {
+      // Target sweep ID for the office
+      const targetSweepId = '88f2h8zsa0e28txst3ahsyp3d';
+
+      // Create graph and find path
+      const graph = await mpSdk.Sweep.createGraph();
+      const currentSweep = await new Promise<SweepInfo>((resolve) => {
+        mpSdk.Sweep.current.subscribe(resolve);
+      });
+
+      const aStarRunner = mpSdk.Graph.createAStarRunner(
+        graph,
+        graph.vertex(currentSweep.sid),
+        graph.vertex(targetSweepId)
+      );
+      
+      const result = aStarRunner.exec();
+      const path = result.path;
+
+      // Navigate through each sweep in the path
+      for (const sweep of path) {
+        await mpSdk.Sweep.moveTo(sweep.id, {
+          rotation: currentPose,
+          transition: mpSdk.Sweep.Transition.FLY,
+          transitionTime: 1000,
+        });
+        
+        // Wait a bit between movements for smooth navigation
+        await new Promise(resolve => setTimeout(resolve, 600));
+      }
+
+      // Clean up
+      graph.dispose();
+    } catch (error) {
+      console.error('Navigation failed:', error);
+      alert('Navigation failed');
+    }
   };
 
   return (
